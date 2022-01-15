@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            body{
+                margin: 0;
+                padding: 0;
+                background-color: black;
+            }
+            .circle{
+                position: absolute  ;
+                z-index: -10;
+                border-radius: 50%;
+                border: 1px solid rgb(20, 148, 20);
+            }
+            .circle:nth-child(1)
+            {
+                width: 100%;
+                height: 100%;
+            }
+            .circle:nth-child(2)
+            {
+                margin:12.5%;
+                width: 75%;
+                height: 75%;
+            }
+            .circle:nth-child(3)
+            {
+                margin:25%;
+                width: 50%;
+                height: 50%;
+            }
+            .circle:nth-child(4)
+            {
+                margin:37.5%;
+                width: 25%;
+                height: 25%;
+            }
+
+            .line{
+                position: absolute;
+                z-index: -10;
+                height: 120%;
+                width: 1px;
+                left: 50%;
+                margin-top: -10%;
+
+                background-color: green;
+            }
+            .line:nth-child(5)
+            {
+                left:50%;
+            }
+            .line:nth-child(6)
+            {
+                transform: rotate(90deg);
+            }
+            .line:nth-child(7)
+            {
+                transform: rotate(30deg);
+            }
+            .line:nth-child(8)
+            {
+                transform: rotate(60deg);
+            }
+            .line:nth-child(9)
+            {
+                transform: rotate(120deg);
+            }
+            .line:nth-child(10)
+            {
+                transform: rotate(150deg);
+            }
+            #CV01{
+                z-index: 10;
+            }
+        </style>
+    </head>
+    <body>
+        
+        <div id = "map" style="position : fixed; width: 601px; height: 601px; top: 50%; left: 50% ;transform: translate(-50%,-50%)">
+            <div class = "circle"></div>
+            <div class = "circle"></div>
+            <div class = "circle"></div>
+            <div class = "circle"></div>
+            
+            <div class = "line"></div>
+            <div class = "line"></div>
+            <div class = "line"></div>
+            <div class = "line"></div>
+            <div class = "line"></div>
+            <div class = "line"></div>
+
+            <canvas id = "CV01" width="601px" height="601px">
+
+            </canvas>
+        </div>
+        <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+        <script>
+            var connected = false;
+            var subTopic = '/test/web';
+            var pubTopic = '/test/web-response'
+            const client = mqtt.connect('ws://broker.emqx.io:8083/mqtt');
+            client.subscribe(subTopic,0);
+            client.on   (
+                            'message'
+                            ,
+                            (topic, payload)=>{
+                                let res = JSON.parse(payload.toString());
+                                ///console.log(res);
+                                if(res['type'] == "connection" && connected == false)
+                                {
+                                    let _res = '{"type":"connection","status":"OK"}'
+                                    client.publish(pubTopic,_res);
+                                    connected = true;
+                                }
+                                else
+                                if(res['type'] == "connection" && connected == true)
+                                {
+                                    //console.log(res);
+                                    if(res['status'] == "cancle")
+                                    {
+                                        connected = false;
+                                        client.end();
+                                    }
+                                }
+                                else
+                                if(res['type'] == "data-server" && connected == true)
+                                {
+                                    ///console.log(res);
+                                    if(res['entity'] == "obstacle")
+                                    {
+                                       renderObstacle(Math.ceil(res['x']),Math.ceil(res['y'])); 
+                                    }
+                                    else if(res['entity'] == "path")
+                                    {
+                                        renderPath(Math.ceil(res['x']), Math.ceil(res['y']));
+                                    }
+                                }
+                            }
+                        )
+        </script>
+        <script>
+            
+            var canvasW = 601;
+            var canvasH = 601;
+            var canvas = document.getElementById('CV01');
+            var map = document.getElementById('map');
+            var ctx = canvas.getContext('2d');
+            
+            
+            function renderObstacle(x, y)
+            {
+                let X = document.getElementById('map').getBoundingClientRect().left+document.getElementById('map').getBoundingClientRect().width/2;
+                let Y = document.getElementById('map').getBoundingClientRect().top+document.getElementById('map').getBoundingClientRect().height/2;
+                let rect = canvas.getBoundingClientRect();
+                let gradient = ctx.createRadialGradient(X+x-rect.left, Y+y-rect.top,1, X+x-rect.left,Y+y-rect.top,2);
+                gradient.addColorStop(0,"red");
+                gradient.addColorStop(1,"#0000");
+                console.log(X+", "+Y);
+                console.log(x+", "+y);
+
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0,canvasW,canvasH);
+            }
+            renderObstacle(0,0);
+            function renderFinishPoint(x, y)
+            {
+                let gradient = ctx.createRadialGradient(x, y, 1, x,y, 2);
+                gradient.addColorStop(0,"green");
+                gradient.addColorStop(1,"#0000");
+                ///ctx.clearRect(0,0, canvasW, canvasH);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0,0, canvasW, canvasH);
+            }
+            function renderPath(x, y)
+            {
+                let X = document.getElementById('map').getBoundingClientRect().left+document.getElementById('map').getBoundingClientRect().width/2;
+                let Y = document.getElementById('map').getBoundingClientRect().top+document.getElementById('map').getBoundingClientRect().height/2;
+                let rect = canvas.getBoundingClientRect();
+                let gradient = ctx.createRadialGradient(X+x-rect.left, Y+y-rect.top,1, X+x-rect.left,Y+y-rect.top,2);
+                gradient.addColorStop(0,"#CCCC00");
+                gradient.addColorStop(1,"#0000");
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0,canvasW,canvasH);
+            }
+            getCursor = (event) => {
+                if(connected == false) 
+                {
+                    alert('Connecting!!!');
+                    return;
+                }
+                let X = document.getElementById('map').getBoundingClientRect().left+document.getElementById('map').getBoundingClientRect().width/2;
+                let Y = document.getElementById('map').getBoundingClientRect().top+document.getElementById('map').getBoundingClientRect().height/2;
+                let rect = canvas.getBoundingClientRect();
+                let x = event.clientX -X;
+                let y = event.clientY -Y;
+                let res = '{ "type":"data-web", "entity":"finish-point", "x":"'+x*801/601+'", "y":"'+(-1)*y*801/601+'" }'; 
+                renderFinishPoint(x+X - rect.left,y+Y - rect.top);
+                console.log(res);
+                client.publish(pubTopic, res);
+            }
+            map.addEventListener('click', getCursor);
+
+
+            
+        </script>
+    </body>
+</html>
