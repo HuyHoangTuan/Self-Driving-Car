@@ -3,7 +3,7 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-
+sketch_dec21a
 ### STS ###
 .apt_generated
 .classpath
@@ -14,8 +14,8 @@ target/
 .sts4-cache
 
 ### IntelliJ IDEA ###
-**/node_modules
-**/.idea
+**/node_modules/
+**/.idea/
 **/*.iws
 **/*.iml
 **/*.ipr

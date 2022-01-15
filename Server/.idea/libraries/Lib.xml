@@ -1,10 +1,10 @@
 <component name="libraryTable">
   <library name="Lib">
     <CLASSES>
-      <root url="file://$PROJECT_DIR$/Lib" />
+      <root url="jar://$PROJECT_DIR$/Lib/org.eclipse.paho.client.mqttv3-1.2.5.jar!/" />
+      <root url="jar://$PROJECT_DIR$/Lib/json-20210307.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />
-    <jarDirectory url="file://$PROJECT_DIR$/Lib" recursive="false" />
   </library>
 </component>
