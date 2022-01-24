@@ -125,7 +125,7 @@
                                     }
                                 }
                                 else
-                                if(res['type'] == "data-server" && connected == true)
+                                if(res['type'] == "data-server")
                                 {
                                     ///console.log(res);
                                     if(res['entity'] == "obstacle")
@@ -195,7 +195,7 @@
                 let rect = canvas.getBoundingClientRect();
                 let x = event.clientX -X;
                 let y = event.clientY -Y;
-                let res = '{ "type":"data-web", "entity":"finish-point", "x":"'+x*801/601+'", "y":"'+(-1)*y*801/601+'" }'; 
+                let res = '{ "type":"data-web", "entity":"finish-point", "x":"'+x*801/601+'", "y":"'+y*801/601+'" }'; 
                 renderFinishPoint(x+X - rect.left,y+Y - rect.top);
                 console.log(res);
                 client.publish(pubTopic, res);

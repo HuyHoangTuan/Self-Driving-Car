@@ -137,16 +137,18 @@ public class Publisher implements MqttCallback
                 for(int i=0;i<4;i++)
                 {
                     double distance = Distance.getInt(i);
-                    distance = distance / 1000.0;
-                    if (Math.abs(distance - 10000.0) <= 0.01) continue;
+                    ///distance = distance / 1000.0;
+                    if (Math.abs(distance - 0.0) <= 0.01) continue;
 
                     double sensorAngle = Angle.getInt(i);
                     sensorAngle = sensorAngle / 100.0;
                     if(Math.abs(sensorAngle) >360.0 ) continue;
+
                     if (i == 0)
                     {
                         if (sensorAngle < -90.0 || sensorAngle > 0.0) continue;
                     }
+
                     if (i==1)
                     {
                         if (sensorAngle < -180.0 || sensorAngle > -90.0) continue;
@@ -162,8 +164,9 @@ public class Publisher implements MqttCallback
                     double angle = Math.toRadians(sensorAngle+carAngle-Car.currentAngle);
                     double x = Math.sin(angle)*distance*601.0/801.0;
                     double y = Math.cos(angle)*distance*601.0/801.0;
-
                     y*=-1;
+                    ///System.out.println(x+", "+y);
+
                     String newContent = Main.JSONConverter(new String[] {
                             "type","data-server",
                             "entity","obstacle",

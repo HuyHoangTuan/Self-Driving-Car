@@ -1,15 +1,13 @@
 package com.company;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.PriorityQueue;
-import java.util.Queue;
+import java.util.*;
 
 public class Car
 {
 
     public static int START = -2, OBSTACLE = 1, FINISH = 2, COLSTART = 401, ROWSTART = 401;
     public static int COLFINISH = 401, ROWFINISH = 401;
+    public static int TURN_SPD = 20;
     public static int NUM_ROW = 800, NUM_COl =800;
     public static int UP =1, RIGHT =2, DOWN =3, LEFT = 4;
     public static double currentAngle = -1;
@@ -19,6 +17,7 @@ public class Car
     public static long h = 1;
 
     public static Cell[][] map = new Cell[800][800];
+
     static{
         for(int i=0;i<NUM_ROW;i++)
         {
@@ -27,6 +26,7 @@ public class Car
                 map[i][j]= new Cell(1,1,0);
                 map[i][j].row = i;
                 map[i][j].col = j;
+                map[i][j].blocks = 0;
                 map[i][j].type = 0;
                 map[i][j].direction = 0;
             }
@@ -46,6 +46,7 @@ public class Car
                 map[i][j]= new Cell(1,1,0);
                 map[i][j].row = i;
                 map[i][j].col = j;
+                map[i][j].blocks = 0;
                 map[i][j].type = 0;
                 map[i][j].direction = 0;
             }
@@ -73,8 +74,29 @@ public class Car
 
         if(type == FINISH)
         {
+            if(ROWFINISH != ROWSTART && COLFINISH!=COLSTART)
+            {
+                for (int i = Math.max(0, ROWFINISH - R); i <= Math.min(ROWFINISH + R, NUM_ROW); i++) {
+                    for (int j = Math.max(0, COLFINISH - R); j <= Math.min(COLFINISH + R, NUM_COl); j++) {
+                        if (map[i][j].type == OBSTACLE) continue;
+                        map[i][j].type = 0;
+                    }
+                }
+            }
+
             ROWFINISH = ROWSTART+row;
             COLFINISH = COLSTART+col;
+
+            for(int i= Math.max(0, ROWSTART+row-R);i<=Math.min(ROWSTART+row+R, NUM_ROW);i++)
+            {
+                for(int j= Math.max(0,COLSTART+col-R);j<=Math.min(COLSTART+col+R,NUM_COl);j++)
+                {
+                    if(map[i][j].type == OBSTACLE) continue;
+                    map[i][j].row = i;
+                    map[i][j].col = j;
+                    map[i][j].type = FINISH;
+                }
+            }
             /// System.out.println(ROWFINISH+" "+COLFINISH);
         }
         else if(type == OBSTACLE)
@@ -96,15 +118,20 @@ public class Car
     private static PriorityQueue<Cell> openCells;
     private static boolean closedCells[][] = new boolean[800][800];
 
-    private static void update(Cell current, Cell target,int direction)
+    private static void update(Cell current, Cell target,int direction,int blocks)
     {
         if(target.type == OBSTACLE || closedCells[target.row][target.col]) return;
-        long cost = current.cost+target.heuristicCost;
+        if(current.direction != 0 && current.direction !=direction && blocks <=TURN_SPD) return;
+        long cost = current.cost+1;
         boolean in = openCells.contains(target);
+        if(current.direction!=0 && current.direction!=direction) blocks = -1*TURN_SPD;
         if(!in || cost <target.cost)
         {
-            target.cost = cost;
             target.direction = direction;
+            target.blocks = blocks;
+            target.prev=current;
+            target.cost = cost;
+            target.hcost = cost+target.heuristicCost;
             if(!in) openCells.add(target);
         }
     }
@@ -128,53 +155,45 @@ public class Car
             for(int j=0;j<NUM_COl;j++)
             {
                 closedCells[i][j]=false;
-                map[i][j].cost = 0;
-                map[i][j].heuristicCost = Math.abs(i-ROWSTART)*Math.abs(i-ROWSTART)+Math.abs(j-COLSTART)*Math.abs(j-COLSTART);
+                map[i][j].cost = Long.MAX_VALUE;
+                map[i][j].hcost = Long.MAX_VALUE;
+                map[i][j].heuristicCost = Math.abs(i-ROWFINISH)*Math.abs(i-ROWFINISH)+Math.abs(j-COLFINISH)*Math.abs(j-COLFINISH);
                 map[i][j].direction = 0;
+                map[i][j].blocks = 0;
+                map[i][j].prev=null;
             }
-
         openCells = new PriorityQueue<Cell>();
-        openCells.add(map[ROWFINISH][COLFINISH]);
+        openCells.add(map[ROWSTART][COLSTART]);
 
-        map[ROWFINISH][COLFINISH].cost = 0;
+        map[ROWSTART][COLSTART].cost = 0;
+        map[ROWSTART][COLSTART].hcost = map[ROWSTART][COLSTART].heuristicCost;
 
         Cell current;
         while(!openCells.isEmpty())
         {
             current = openCells.poll();
-            /// System.out.println(current.row+" , "+current.col+" : "+current.cost);
             if(current == null) break;
 
             closedCells[current.row][current.col] = true;
-
-            if(current.equals(map[ROWSTART][COLSTART])) break;
-
-            if(current.row - 1 >=0)
+            if(current.type == FINISH) break;
+            int blocks = current.blocks;
+            if(current.row - 1 >=0  )
             {
-                update(current, map[current.row-1][current.col], UP);
+                update(current, map[current.row-1][current.col], UP, blocks+1);
             }
-            if(current.row +1 < NUM_ROW)
+            if(current.row +1 < NUM_ROW && current.direction != 0)
             {
-                update(current, map[current.row+1][current.col],DOWN);
+                update(current, map[current.row+1][current.col],DOWN, blocks+1);
             }
-            if(current.col -1 >=0)
+            if(current.col -1 >=0 && current.direction != 0)
             {
-                update(current, map[current.row][current.col-1],RIGHT);
+                update(current, map[current.row][current.col-1],LEFT, blocks+1 );
             }
-            if(current.col + 1 <NUM_COl)
+            if(current.col + 1 <NUM_COl && current.direction != 0)
             {
-                update(current, map[current.row][current.col+1],LEFT);
+                update(current, map[current.row][current.col+1],RIGHT, blocks+1 );
             }
         }
-
-        if(map[ROWSTART][COLSTART].direction == 0)
-        {
-            System.out.println("Can't find path !!!");
-            return;
-        }
-        int currentDirrection = UP;
-
-        current = map[ROWSTART][COLSTART];
 
         /*
             direction :
@@ -189,131 +208,217 @@ public class Car
             times : [???]
          */
 
+        current = null;
+        int cur_direction = UP;
         ArrayList<Integer> path = new ArrayList<Integer>();
         ArrayList<Integer> times = new ArrayList<Integer>();
+        ArrayList<Cell> result = new ArrayList<>();
+
+        for(int i=0;i< NUM_ROW;i++)
+        {
+            for(int j=0;j<NUM_COl;j++)
+            {
+                if(map[i][j].type == FINISH && map[i][j].prev != null)
+                {
+                    current = map[i][j];
+                    break;
+                }
+            }
+            if(current !=null) break;
+        }
+        if(current == null)
+        {
+            long alter_hcost_destination =Long.MAX_VALUE;
+            for(int i=0;i<NUM_ROW;i++)
+            {
+                for(int j=0;j<NUM_COl;j++)
+                {
+                    if(map[i][j].type!=OBSTACLE && map[i][j].type!=START && map[i][j].prev != null)
+                    {
+                        if(alter_hcost_destination > Math.abs(i-ROWFINISH)*Math.abs(i-ROWFINISH)+Math.abs(j-COLFINISH)*Math.abs(j-COLFINISH))
+                        {
+                            alter_hcost_destination = Math.abs(i-ROWFINISH)*Math.abs(i-ROWFINISH)+Math.abs(j-COLFINISH)*Math.abs(j-COLFINISH);
+                            current = map[i][j];
+                        }
+                    }
+                }
+            }
+        }
+        if(current == null)
+        {
+            System.out.println("Can't find path!!!");
+            return;
+        }
         path.add(8);
         times.add(0);
         while(true)
         {
-            int direction = current.direction;
-            listPath.add(current);
+            if(current==null)
+            {
+                System.out.println("FUCKED UP!!!");
+                break;
+            }
+            result.add(current);
+            if(current.type == START) break;
+            current = current.prev;
+        }
+        Collections.reverse(result);
+        current = null;
+        for(Cell ans: result)
+        {
+            System.out.println("("+ans.row+", "+ans.col+", "+ ans.type+")");
+            listPath.add(ans);
             queue.add(
                     Main.JSONConverter(
                             new String[]    {
                                     "type","data-server",
                                     "entity","path",
-                                    "x", Double.toString((current.col-COLSTART)*w*601/801),
-                                    "y", Double.toString(((current.row-ROWSTART)*h*-1) * 601/801)
+                                    "x", Double.toString((ans.col-COLSTART)*w*601/801),
+                                    "y", Double.toString(((ans.row-ROWSTART)*h) * 601/801)
                             }
                     )
             );
-            ///System.out.print("("+current.row+", "+current.col+"), ");
-            if(current.equals(map[ROWFINISH][COLFINISH])) break;
-
-            if(currentDirrection == direction )
+            if(current == null)
             {
-                if(path.get(path.size()-1) !=8)
+                current = ans;
+                continue;
+            }
+
+            int step_row = ans.row-current.row;
+            int step_col = ans.col-current.col;
+
+            if(step_row == 0 && step_col == 1)
+            {
+                if(cur_direction == UP)
                 {
-                    path.add(8);
+                    path.add(6);
                     times.add(1);
                 }
-                else times.set(times.size()-1, times.get(times.size()-1)+1);
-            }
-            else
-            {
-                if(currentDirrection == UP)
+                else if(cur_direction == DOWN)
                 {
-                    if(direction == DOWN)
-                    {
-                        path.add(2);
-                        times.add(1);
-                    }
-                    else if(direction == RIGHT)
-                    {
-                        path.add(6);
-                        times.add(1);
-                    }
-                    else if(direction == LEFT)
-                    {
-                        path.add(4);
-                        times.add(1);
-                    }
+                    path.add(4);
+                    times.add(1);
                 }
-                else if(currentDirrection == DOWN)
+                else if(cur_direction == LEFT)
                 {
-                    if(direction == UP)
-                    {
-                        path.add(2);
-                        times.add(1);
-                    }
-                    else if(direction == RIGHT)
-                    {
-                        path.add(6);
-                        times.add(1);
-                    }
-                    else if(direction == LEFT)
-                    {
-                        path.add(4);
-                        times.add(1);
-                    }
+                    path.add(2);
+                    times.add(1);
                 }
-                else if(currentDirrection == RIGHT)
+                else if(cur_direction == RIGHT)
                 {
-                    if(direction == UP)
+                    if(path.get(path.size()-1) !=8)
                     {
-                        path.add(4);
+                        path.add(8);
                         times.add(1);
                     }
-                    else if(direction == LEFT)
-                    {
-                        path.add(2);
-                        times.add(1);
-                        ///System.out.print("Backward");
-                    }
-                    else if(direction == DOWN)
-                    {
-                        path.add(6);
-                        times.add(1);
-                        ///System.out.print("Right");
-                    }
+                    else times.set(times.size()-1, times.get(times.size()-1)+1);
                 }
-                else if( currentDirrection == LEFT)
+                cur_direction = RIGHT;
+            }
+            else if(step_row == 0 && step_col == -1)
+            {
+
+                if(cur_direction == UP)
                 {
-                    if(direction == UP)
-                    {
-                        path.add(6);
-                        times.add(1);
-                    }
-                    else if(direction == RIGHT)
-                    {
-                        path.add(2);
-                        times.add(1);
-                    }
-                    else if(direction == DOWN)
-                    {
-                        path.add(4);
-                        times.add(1);
-                    }
+                    path.add(4);
+                    times.add(1);
                 }
+                else if(cur_direction == DOWN)
+                {
+                    path.add(6);
+                    times.add(1);
+                }
+                else if(cur_direction == LEFT)
+                {
+                    if(path.get(path.size()-1) !=8)
+                    {
+                        path.add(8);
+                        times.add(1);
+                    }
+                    else times.set(times.size()-1, times.get(times.size()-1)+1);
+                }
+                else if(cur_direction == RIGHT)
+                {
+                    path.add(2);
+                    times.add(1);
+                }
+                cur_direction = LEFT;
             }
-            if(direction == UP)
+            else if(step_row == 1 && step_col == 0)
             {
-                current = map[current.row+1][current.col];
+                if(cur_direction == UP)
+                {
+                    path.add(2);
+                    times.add(1);
+                }
+                else if(cur_direction == DOWN)
+                {
+                    if(path.get(path.size()-1) !=8)
+                    {
+                        path.add(8);
+                        times.add(1);
+                    }
+                    else times.set(times.size()-1, times.get(times.size()-1)+1);
+                }
+                else if(cur_direction == LEFT)
+                {
+                    path.add(4);
+                    times.add(1);
+                }
+                else if(cur_direction == RIGHT)
+                {
+                    path.add(6);
+                    times.add(1);
+                }
+                cur_direction = DOWN;
             }
-            else if(direction == DOWN)
+            else if(step_row == -1 && step_col == 0)
             {
-                current = map[current.row-1][current.col];
+                if(cur_direction == UP)
+                {
+                    if(path.get(path.size()-1) !=8)
+                    {
+                        path.add(8);
+                        times.add(1);
+                    }
+                    else times.set(times.size()-1, times.get(times.size()-1)+1);
+                }
+                else if(cur_direction == DOWN)
+                {
+                    path.add(2);
+                    times.add(1);
+                }
+                else if(cur_direction == LEFT)
+                {
+                    path.add(6);
+                    times.add(1);
+                }
+                else if(cur_direction == RIGHT)
+                {
+                    path.add(4);
+                    times.add(1);
+                }
+                cur_direction = UP;
             }
-            else if(direction == LEFT)
-            {
-                current = map[current.row][current.col-1];
-            }
-            else if(direction == RIGHT)
-            {
-                current = map[current.row][current.col+1];
-            }
-            currentDirrection = direction;
+            current = ans;
         }
+        for(int i=0;i<path.size();i++)
+        {
+            if(path.get(i) ==4 || path.get(i) == 6)
+            {
+                times.set(i,99);
+                if(i-1 >=0)
+                {
+                    times.set(i-1,times.get(i-1)-TURN_SPD);
+                }
+                if(i+1<path.size())
+                {
+                    times.set(i+1, Math.max(0,times.get(i+1)-TURN_SPD));
+                }
+            }
+        }
+        System.out.println(path.toString());
+        System.out.println(times.toString());
         int msgPayload = 0;
         int cur = 0;
         String msgPath = "";
@@ -346,14 +451,79 @@ public class Car
                 msgTimes = "";
             }
         }
-        ///System.out.println("\n");
-        ///System.out.println(path.toString());
-        ///System.out.println(times.toString());
         Main.inProcess = 0;
     }
+    public static void change_map(int x,int y)
+    {
+        x*=-1;
 
-
-
+        if(x<0)
+        {
+            if(y<0)
+            {
+                for(int i=NUM_ROW-1;i>=0;i--)
+                {
+                    for(int j=NUM_COl-1;j>=0;j--)
+                    {
+                        if(i== ROWSTART && j == COLSTART) continue;
+                        if(i+x<0 || j+y<0)
+                        {
+                            map[i][j].type = 0;
+                        }
+                        else map[i][j].type = map[i+x][j+y].type;
+                    }
+                }
+            }
+            else
+            {
+                for(int i=NUM_ROW-1;i>=0;i--)
+                {
+                    for(int j=0;j<NUM_COl;j++)
+                    {
+                        if(i== ROWSTART && j == COLSTART) continue;
+                        if(i+x<0 || j+y<0)
+                        {
+                            map[i][j].type = 0;
+                        }
+                        else map[i][j].type = map[i+x][j+y].type;
+                    }
+                }
+            }
+        }
+        else
+        {
+            if(y<0)
+            {
+                for(int i=NUM_ROW-1;i>=0;i--)
+                {
+                    for(int j=NUM_COl-1;j>=0;j--)
+                    {
+                        if(i== ROWSTART && j == COLSTART) continue;
+                        if(i+x<0 || j+y<0)
+                        {
+                            map[i][j].type = 0;
+                        }
+                        else map[i][j].type = map[i+x][j+y].type;
+                    }
+                }
+            }
+            else
+            {
+                for(int i=NUM_ROW-1;i>=0;i--)
+                {
+                    for(int j=0;j<NUM_COl;j++)
+                    {
+                        if(i== ROWSTART && j == COLSTART) continue;
+                        if(i+x<0 || j+y<0)
+                        {
+                            map[i][j].type = 0;
+                        }
+                        else map[i][j].type = map[i+x][j+y].type;
+                    }
+                }
+            }
+        }
+    }
 
 
 }

@@ -72,8 +72,7 @@ public class Main
     public static void main(String[] args) throws Exception
     {
         Publisher clientWeb = new Publisher("ws://broker.emqx.io:8083/mqtt","/test/web", "/test/web-response", "Fankychop");
-        Publisher clientCar = new Publisher("tcp://anlozrer.duckdns.org:31884","/test/car", "/test/car-response", "Fankychop1");
-
+        Publisher clientCar = new Publisher("tcp://anlozrer.duckdns.org:31884","/test/car", "/test/car-response", "123");
         /// Set-up connection
         while(!clientWeb.isConnected() || !clientCar.isConnected())
         {
@@ -143,6 +142,5 @@ public class Main
         Thread.sleep(50);
         disconnect(clientCar);
         Thread.sleep(50);
-
     }
 }

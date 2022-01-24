@@ -7,7 +7,10 @@ public class Cell implements Comparable<Cell>
     public long heuristicCost = 0;
     public int type = 0;
     public long cost;
+    public long hcost;
+    public Cell prev;
     public int direction;
+    public int blocks;
     private long w;
     private long h;
 
@@ -17,8 +20,8 @@ public class Cell implements Comparable<Cell>
     @Override
     public int compareTo(Cell o)
     {
-        if(this.cost<o.cost) return -1;
-        if(this.cost == o.cost) return 0;
+        if(this.hcost<o.hcost) return -1;
+        if(this.hcost == o.hcost) return 0;
         return 1;
     }
 
