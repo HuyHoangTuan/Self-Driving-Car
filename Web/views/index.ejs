@@ -97,6 +97,7 @@
         </div>
         <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
         <script>
+            var countClick = 0;
             var connected = false;
             var subTopic = '/test/web';
             var pubTopic = '/test/web-response'
@@ -127,7 +128,7 @@
                                 else
                                 if(res['type'] == "data-server")
                                 {
-                                    ///console.log(res);
+                                    console.log(res);
                                     if(res['entity'] == "obstacle")
                                     {
                                        renderObstacle(Math.ceil(res['x']),Math.ceil(res['y'])); 
@@ -135,6 +136,10 @@
                                     else if(res['entity'] == "path")
                                     {
                                         renderPath(Math.ceil(res['x']), Math.ceil(res['y']));
+                                    }
+                                    else if( res['entity']="map")
+                                    {
+                                        shiftCanvas(Math.ceil(res['x']), Math.ceil(res['y']));
                                     }
                                 }
                             }
@@ -184,12 +189,25 @@
                 ctx.fillStyle = gradient;
                 ctx.fillRect(0, 0,canvasW,canvasH);
             }
+            function shiftCanvas(x, y)
+            {
+                let tmpCanvas = document.createElement("canvas");
+                tmpCanvas.width = canvasW;
+                tmpCanvas.height = canvasH;
+                tmpCanvas.getContext('2d').drawImage(canvas, x ,y, canvasW - x, canvasH - y, 0, 0, canvasW - x, canvasH - y);
+
+                ctx.clearRect(0, 0, canvasW, canvasH);
+
+                ctx.drawImage(tmpCanvas, 0, 0);
+            }
             getCursor = (event) => {
                 if(connected == false) 
                 {
                     alert('Connecting!!!');
                     return;
                 }
+                countClick ++;
+                if(countClick == 1) return;
                 let X = document.getElementById('map').getBoundingClientRect().left+document.getElementById('map').getBoundingClientRect().width/2;
                 let Y = document.getElementById('map').getBoundingClientRect().top+document.getElementById('map').getBoundingClientRect().height/2;
                 let rect = canvas.getBoundingClientRect();
@@ -200,8 +218,23 @@
                 console.log(res);
                 client.publish(pubTopic, res);
             }
+            /*getKeypressed = (event) =>
+            {
+                let keynum;
+                keynum = evetn.keyCode;
+                alear(String.fromCharCode(keynum));
+            }*/
             map.addEventListener('click', getCursor);
-
+            window.addEventListener('keydown', function(e)
+            {
+                let res = {
+                    type: "data-web",
+                    entity: "key",
+                    value: e.keyCode
+                };
+                console.log(res);
+                client.publish(pubTopic, JSON.stringify(res));
+            })
 
             
         </script>

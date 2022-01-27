@@ -2,10 +2,9 @@ package com.company;
 
 public class Cell implements Comparable<Cell>
 {
-    public int row;
-    public int col;
+    public long row;
+    public long col;
     public long heuristicCost = 0;
-    public int type = 0;
     public long cost;
     public long hcost;
     public Cell prev;
@@ -14,7 +13,10 @@ public class Cell implements Comparable<Cell>
     private long w;
     private long h;
 
-
+    public long calHeuristicCost(long x, long y)
+    {
+        return Math.abs(row-x)*Math.abs(row-x)+Math.abs(col-y)*Math.abs(col-y);
+    }
 
 
     @Override
@@ -25,11 +27,10 @@ public class Cell implements Comparable<Cell>
         return 1;
     }
 
-    public Cell(int w,int h, int type)
+    public Cell(int w,int h)
     {
 
         this.w = w;
         this.h = h;
-        this.type = 0;
     }
 }

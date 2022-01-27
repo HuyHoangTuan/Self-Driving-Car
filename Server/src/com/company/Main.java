@@ -1,6 +1,10 @@
 package com.company;
 
 
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+
 public class Main
 {
     /*
@@ -43,6 +47,8 @@ public class Main
         "y" : ""
      */
     public static int inProcess = 0;
+    public static int incomeData = 0;
+    public static Logger logger = Logger.getLogger("MyLog");
     public static String JSONConverter(String... content)
     {
         StringBuffer res = new StringBuffer();
@@ -72,8 +78,13 @@ public class Main
     public static void main(String[] args) throws Exception
     {
         Publisher clientWeb = new Publisher("ws://broker.emqx.io:8083/mqtt","/test/web", "/test/web-response", "Fankychop");
-        Publisher clientCar = new Publisher("tcp://anlozrer.duckdns.org:31884","/test/car", "/test/car-response", "123");
+        ///Publisher clientCar = new Publisher("tcp://anlozrer.duckdns.org:31884","/test/car", "/test/car-response", "123");
+        Publisher clientCar = new Publisher("tcp://127.0.0.1:1884","/test/car", "/test/car-response", "123");
         /// Set-up connection
+        FileHandler fh = new FileHandler("F:\\Self-Driving Car\\Server\\src\\com\\company\\Log\\Mylog.log");
+        logger.addHandler(fh);
+        SimpleFormatter formatter = new SimpleFormatter();
+        fh.setFormatter(formatter);
         while(!clientWeb.isConnected() || !clientCar.isConnected())
         {
             System.out.println();
@@ -112,28 +123,67 @@ public class Main
         System.out.println("-----------------------------------------------------------------");
 
         Thread.sleep(500);
+        long timeMillisDirection = 0;
+        long timeMillisObstacle = 0;
+        long timesMillisPath = 0;
+        long timesMillisControl = 0;
         while(clientCar.isConnected()== true && clientWeb.isConnected() == true)
         {
-            if(!clientCar.queue.isEmpty())
+            ///System.out.println(Car.X+", "+Car.Y);
+            long currentTimesMillisControl = System.currentTimeMillis();
+            if(currentTimesMillisControl - timesMillisControl >=50)
             {
-                clientWeb.publish(clientCar.queue.poll());
+                timesMillisControl = currentTimesMillisControl;
+                if (!clientWeb.queue.isEmpty())
+                {
+                    clientCar.publish(clientWeb.queue.poll());
+                }
             }
-            Thread.sleep(5);
+            long currentTimesMillisObstacle = System.currentTimeMillis();
+            if(currentTimesMillisObstacle - timeMillisObstacle >= 5)
+            {
+                timeMillisObstacle = currentTimesMillisObstacle;
+                if (!clientCar.queue.isEmpty())
+                {
+                    clientWeb.publish(clientCar.queue.poll());
+                }
+            }
+
             if(Car.checkPath() == false)
             {
+                clientCar.publish(
+                        JSONConverter(
+                                new String[]{
+                                        "type","data-server",
+                                        "entity","1",
+                                        "path","0",
+                                        "times","0"
+                                }
+                        )
+                );
                 Car.find_path();
             }
-            Thread.sleep(5);
-            if(!Car.queue.isEmpty())
+
+            long currentTimesMillisPath = System.currentTimeMillis();
+            if(currentTimesMillisPath - timesMillisPath >= 8)
             {
-                clientWeb.publish(Car.queue.poll());
+                timesMillisPath = currentTimesMillisPath;
+                if (!Car.queue.isEmpty())
+                {
+                    clientWeb.publish(Car.queue.poll());
+                }
             }
-            Thread.sleep(5);
-            if(!Car.queueModule.isEmpty())
+
+            long currentTimesMillisDirection = System.currentTimeMillis();
+            if(currentTimesMillisDirection - timeMillisDirection >=200)
             {
-                clientCar.publish(Car.queueModule.poll());
+                timeMillisDirection = currentTimesMillisDirection;
+                if (!Car.queueModule.isEmpty())
+                {
+                    clientCar.publish(Car.queueModule.poll());
+                }
+
             }
-            Thread.sleep(5);
 
         }
 

@@ -122,18 +122,85 @@ public class Publisher implements MqttCallback
                 {
                     System.out.println(res.getString("distance")+" , "+res.getString("angle"));
                     System.out.println("------------------------");
-
+                }
+                else if (res.getString("entity").equals("key"))
+                {
+                    int keyCode = res.getInt("value");
+                    if(keyCode < 37 || keyCode > 40) return;
+                    int path = 0;
+                    int times = 0;
+                    if(keyCode == 40)
+                    {
+                        path = 5;
+                        times = 20;
+                    }
+                    else if (keyCode == 38)
+                    {
+                        path = 8;
+                        times = 60;
+                    }
+                    else if(keyCode == 37)
+                    {
+                        queue.add(Main.JSONConverter( new String [] {
+                                "type","data-server",
+                                "entity", "1",
+                                "path","2,4",
+                                "times","20,180"
+                        }));
+                        return;
+                    }
+                    else if(keyCode == 39)
+                    {
+                        queue.add(Main.JSONConverter( new String [] {
+                                "type","data-server",
+                                "entity", "1",
+                                "path","2,6",
+                                "times","20,180"
+                        }));
+                        return;
+                    }
+                    queue.add(Main.JSONConverter( new String [] {
+                            "type","data-server",
+                            "entity", "1",
+                            "path",Integer.toString(path),
+                            "times",Integer.toString(times)
+                    }));
                 }
             }
             else
             if(res.getString("type").equals("data-sensor"))
             {
-
+                if(Main.inProcess == 1) return;
+                if(Main.incomeData <=4)
+                {
+                    Main.incomeData++;
+                    return;
+                }
                 JSONArray Distance = res.getJSONArray("distance");
                 JSONArray Angle = res.getJSONArray("sensorAngle");
                 double carAngle = res.getInt("carSensor");
+                long X = res.getInt("x");
+                long Y = res.getInt("y");
                 carAngle/=100.0;
                 if(Car.currentAngle == -1) Car.currentAngle = carAngle;
+                ///System.out.println(carAngle+", "+Car.currentAngle);
+
+                String newContent = Main.JSONConverter(new String[] {
+                        "type","data-server",
+                        "entity","map",
+                        "x", Long.toString(Y-Car.Y),
+                        "y",Long.toString(X-Car.X)
+                });
+                queue.add(newContent);
+                newContent = Main.JSONConverter(new String[] {
+                        "type","data-server",
+                        "entity","path",
+                        "x",Long.toString(0),
+                        "y",Long.toString(0)
+                });
+                queue.add(newContent);
+                Car.PointToMap(X, Y, Car.START);
+                ///queue.add(newContent);
                 for(int i=0;i<4;i++)
                 {
                     double distance = Distance.getInt(i);
@@ -148,7 +215,7 @@ public class Publisher implements MqttCallback
                     {
                         if (sensorAngle < -90.0 || sensorAngle > 0.0) continue;
                     }
-
+                    ///if(i!=0) continue;
                     if (i==1)
                     {
                         if (sensorAngle < -180.0 || sensorAngle > -90.0) continue;
@@ -164,18 +231,25 @@ public class Publisher implements MqttCallback
                     double angle = Math.toRadians(sensorAngle+carAngle-Car.currentAngle);
                     double x = Math.sin(angle)*distance*601.0/801.0;
                     double y = Math.cos(angle)*distance*601.0/801.0;
-                    y*=-1;
-                    ///System.out.println(x+", "+y);
 
-                    String newContent = Main.JSONConverter(new String[] {
-                            "type","data-server",
-                            "entity","obstacle",
-                            "x", Double.toString(x),
-                            "y", Double.toString(y),
-                    });
+                    y=(y*(-1.0));
+                    /*if(i ==0)
+                    {
+                        System.out.println(angle+", "+carAngle+", "+Car.currentAngle);
+                    }*/
+                    Car.PointToMap(distance, sensorAngle+carAngle-Car.currentAngle, Car.OBSTACLE);
+                    if(Car.isObstacle(distance, sensorAngle+carAngle-Car.currentAngle) == true)
+                    {
+                        newContent = Main.JSONConverter(new String[]{
+                                "type", "data-server",
+                                "entity", "obstacle",
+                                "x", String.valueOf(x),
+                                "y", String.valueOf(y),
+                        });
 
-                    queue.add(newContent);
-                    Car.PointToMap(distance, sensorAngle, Car.OBSTACLE);
+                        queue.add(newContent);
+                    }
+
 
                     /*System.out.print("ID: ");
                     System.out.println(i);

@@ -7,8 +7,8 @@ const char* ssid = "Tuyet Lan ";
 ///const char* password = "wwwfi123456";
 const char* password = "12305abc";
 
-#define MQTT_PORT 31884
-#define MQTT_BROKER "anlozrer.duckdns.org" 
+#define MQTT_PORT 1884
+#define MQTT_BROKER "192.168.1.235" 
 #define QOS 1
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -98,7 +98,7 @@ void callback(char* topic, byte* payload, long Length)
                 strcpy(buff+strlen(entity)+1+strlen(path),"|");
                 strcpy(buff+strlen(entity)+1+strlen(path)+1,times);
                 strcpy(buff+strlen(entity)+1+strlen(path)+1+strlen(times),"\n");
-                client.publish("/test/car-response", buff);
+                ///client.publish("/test/car-response", buff);
                 Serial.write(buff);
           }
         }
@@ -108,12 +108,12 @@ char msg[450];
 void ReadString(char* s)
 {
     ///if(strlen(s)==0) return;
-    long ar[9];
+    long ar[11];
     memset(ar, 0, sizeof(ar));
-    for(int i=0;i<9;i++) ar[i] = -10000000;
-    sscanf(s, "%ld %ld %ld %ld %ld %ld %ld %ld %ld",&ar[0], &ar[1], &ar[2], &ar[3], &ar[4], &ar[5], &ar[6], &ar[7], &ar[8]);
-    for(int i=0;i<9;i++) if(ar[i]== -10000000) return;
-    snprintf(s,250,"{\"type\" : \"data-sensor\" , \"distance\" : [%ld, %ld, %ld, %ld], \"sensorAngle\" : [%ld, %ld, %ld, %ld], \"carSensor\" : %ld }", ar[0], ar[2], ar[4], ar[6], ar[1], ar[3], ar[5], ar[7], ar[8]);
+    for(int i=0;i<11;i++) ar[i] = -10000000;
+    sscanf(s, "%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld",&ar[0], &ar[1], &ar[2], &ar[3], &ar[4], &ar[5], &ar[6], &ar[7], &ar[8], &ar[9], &ar[10]);
+    for(int i=0;i<11;i++) if(ar[i]== -10000000) return;
+    snprintf(s,250,"{\"type\" : \"data-sensor\" , \"distance\" : [%ld, %ld, %ld, %ld], \"sensorAngle\" : [%ld, %ld, %ld, %ld], \"carSensor\" : %ld , \"x\" : %ld , \"y\": %ld }", ar[0], ar[2], ar[4], ar[6], ar[1], ar[3], ar[5], ar[7], ar[8], ar[9], ar[10]);
 }
 
 void loop() 
